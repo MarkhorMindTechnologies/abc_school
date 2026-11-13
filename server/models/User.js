@@ -1,0 +1,45 @@
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true, minlength: 6 },
+  role: {
+    type: String,
+    required: true,
+    enum: [
+      'super_admin',
+      'principal',
+      'teacher',
+      'student',
+      'parent',
+      'accountant',
+      'receptionist',
+      'librarian',
+      'transport',
+      'hr'
+    ],
+    default: 'student'
+  },
+  phone: { type: String, trim: true },
+  linkedStudentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
+  linkedStaffId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
+  status: { type: String, enum: ['Active', 'Suspended', 'Inactive'], default: 'Active' },
+  lastLogin: { type: Date }
+}, {
+  timestamps: true
+});
+
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
+
+userSchema.methods.comparePassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
+export default mongoose.model('User', userSchema);
